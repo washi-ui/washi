@@ -1,0 +1,49 @@
+{
+  "name": "@washi-ui/core",
+  "version": "0.1.0",
+  "description": "Framework-agnostic HTML commenting engine",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcochavezco/washi-ui.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/marcochavezco/washi-ui/issues"
+  },
+  "homepage": "https://github.com/marcochavezco/washi-ui#readme",
+  "keywords": [
+    "html",
+    "comments",
+    "commenting",
+    "annotations",
+    "framework-agnostic",
+    "iframe",
+    "ui-library",
+    "pins",
+    "collaborative"
+  ],
+  "author": "Marco Chavez",
+  "license": "MIT",
+  "sideEffects": false
+}

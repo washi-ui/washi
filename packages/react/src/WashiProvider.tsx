@@ -103,6 +103,13 @@ export function WashiProvider({
   }
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  // Stores cleanup for the current iframe's 'load' listener so it can be
+  // removed when registerIframe(null) is called (required for React StrictMode).
+  const iframeLoadCleanupRef = useRef<(() => void) | null>(null);
+  // Stores unsubscribe functions for Washi event listeners so they can be
+  // removed before each remount cycle.
+  const washiEventCleanupsRef = useRef<Array<() => void>>([]);
+
   const pinPlacedCallbacksRef = useRef<Set<(event: PinPlacedEvent) => void>>(
     new Set(),
   );
@@ -130,15 +137,39 @@ export function WashiProvider({
 
   const registerIframe = useCallback(
     (iframe: HTMLIFrameElement | null): void => {
+      // Always tear down the previous load listener and Washi event subscriptions.
+      // This makes the effect symmetric so React StrictMode's setup→cleanup→setup
+      // cycle works correctly (each setup gets a clean slate).
+      iframeLoadCleanupRef.current?.();
+      iframeLoadCleanupRef.current = null;
+
+      washiEventCleanupsRef.current.forEach((fn) => fn());
+      washiEventCleanupsRef.current = [];
+
       iframeRef.current = iframe;
 
-      if (!iframe || !washiRef.current) return;
+      if (!iframe) {
+        // Unmount Washi so the next registerIframe(iframe) call can re-mount cleanly.
+        if (washiRef.current) {
+          washiRef.current.unmount();
+          setIsReady(false);
+          setComments([]);
+        }
+        return;
+      }
+
+      if (!washiRef.current) return;
 
       const washi = washiRef.current;
 
       const handleLoad = async () => {
         try {
           await washi.mount(iframe, mountOptions);
+
+          // Bail out if this mount cycle was already cancelled (registerIframe(null)
+          // was called while we were awaiting — e.g. StrictMode cleanup).
+          if (iframeRef.current !== iframe) return;
+
           setComments(washi.getComments());
           if (initialMode !== 'view') {
             washi.setMode(initialMode);
@@ -146,18 +177,30 @@ export function WashiProvider({
           setIsReady(true);
           setError(null);
 
-          // Subscribe to events
-          washi.on('pin:placed', (event: PinPlacedEvent) => {
-            pinPlacedCallbacksRef.current.forEach((cb) => cb(event));
-          });
+          // Subscribe to events — store unsubscribes for cleanup
+          washiEventCleanupsRef.current.push(
+            washi.on('pin:placed', (event: PinPlacedEvent) => {
+              pinPlacedCallbacksRef.current.forEach((cb) => cb(event));
+            }),
+          );
 
-          washi.on('comment:clicked', (comment: Comment) => {
-            clickCallbacksRef.current.forEach((cb) => cb(comment));
-          });
+          washiEventCleanupsRef.current.push(
+            washi.on('comment:clicked', (comment: Comment) => {
+              clickCallbacksRef.current.forEach((cb) => cb(comment));
+            }),
+          );
 
-          washi.on('comment:updated', () => {
-            setComments(washi.getComments());
-          });
+          washiEventCleanupsRef.current.push(
+            washi.on('comment:updated', () => {
+              setComments(washi.getComments());
+            }),
+          );
+
+          washiEventCleanupsRef.current.push(
+            washi.on('comment:deleted', () => {
+              setComments(washi.getComments());
+            }),
+          );
         } catch (err) {
           setError(err instanceof Error ? err : new Error(String(err)));
           setIsReady(false);
@@ -168,6 +211,8 @@ export function WashiProvider({
         handleLoad();
       } else {
         iframe.addEventListener('load', handleLoad);
+        iframeLoadCleanupRef.current = () =>
+          iframe.removeEventListener('load', handleLoad);
       }
     },
     [mountOptions, initialMode],

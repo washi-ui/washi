@@ -19,6 +19,20 @@ export type { WashiFrameProps } from './WashiFrame';
 export { CommentList } from './CommentList';
 export type { CommentListProps } from './CommentList';
 
+// Floating UI components (primitives)
+export { WashiToolBubble } from './WashiToolBubble';
+export type { WashiToolBubbleProps, WashiToolBubblePosition } from './WashiToolBubble';
+
+export { WashiCommentsSidebar } from './WashiCommentsSidebar';
+export type { WashiCommentsSidebarProps } from './WashiCommentsSidebar';
+
+export { WashiPinDialog } from './WashiPinDialog';
+export type { WashiPinDialogProps } from './WashiPinDialog';
+
+// All-in-one compound component
+export { WashiUI } from './WashiUI';
+export type { WashiUIProps } from './WashiUI';
+
 // Re-export core types for convenience
 export type {
   Comment,

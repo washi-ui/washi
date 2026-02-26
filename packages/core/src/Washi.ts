@@ -59,6 +59,7 @@ export class Washi {
   private options?: MountOptions;
   private contentReady: boolean = false;
   private activePinId?: string;
+  private mountGeneration = 0;
 
   /**
    * Creates a new Washi instance with the specified adapter.
@@ -172,6 +173,8 @@ export class Washi {
       throw new Error('No iframe attacted to the DOM.');
     }
 
+    const generation = ++this.mountGeneration;
+
     this.iframe = iframe;
     this.options = options;
 
@@ -188,11 +191,18 @@ export class Washi {
     // Wait for content dimensions to stabilize before rendering pins
     await this.waitForContentReady();
 
+    // Bail out if unmount() was called while we were awaiting
+    if (this.mountGeneration !== generation) return;
+
     // Update overlay dimensions after content is ready
     this.updateOverlayDimensions();
 
     try {
       const comments = await this.adapter.load();
+
+      // Bail out if unmount() was called while the adapter was loading
+      if (this.mountGeneration !== generation) return;
+
       comments.forEach((comment) => {
         this.comments.set(comment.id, comment);
         this.renderPin(comment);
@@ -668,6 +678,9 @@ export class Washi {
    * ```
    */
   unmount(): void {
+    // Invalidate any in-flight mount() continuation
+    this.mountGeneration++;
+
     if (this.boundHandleOverlayClick && this.overlay) {
       this.overlay.removeEventListener('click', this.boundHandleOverlayClick);
     }

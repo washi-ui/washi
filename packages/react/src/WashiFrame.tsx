@@ -6,8 +6,8 @@ import { useWashiContext } from './WashiProvider';
  */
 export interface WashiFrameProps
   extends Omit<IframeHTMLAttributes<HTMLIFrameElement>, 'ref'> {
-  /** URL to load in the iframe */
-  src: string;
+  /** URL to load in the iframe. Omit when using srcDoc to pass an HTML string. */
+  src?: string;
   /** Optional: Additional CSS class name */
   className?: string;
   /** Optional: Inline styles */

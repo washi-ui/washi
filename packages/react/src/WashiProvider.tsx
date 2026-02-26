@@ -24,6 +24,8 @@ import {
 export interface WashiContextValue {
   /** The Washi instance (null if not mounted) */
   washi: Washi | null;
+  /** The registered iframe element (null if not mounted) */
+  iframeEl: HTMLIFrameElement | null;
   /** Current mode */
   mode: WashiMode;
   /** Function to change the mode */
@@ -120,6 +122,7 @@ export function WashiProvider({
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [activeComment, setActiveCommentState] = useState<Comment | null>(null);
+  const [iframeElState, setIframeElState] = useState<HTMLIFrameElement | null>(null);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -147,6 +150,7 @@ export function WashiProvider({
       washiEventCleanupsRef.current = [];
 
       iframeRef.current = iframe;
+      setIframeElState(iframe);
 
       if (!iframe) {
         // Unmount Washi so the next registerIframe(iframe) call can re-mount cleanly.
@@ -304,6 +308,7 @@ export function WashiProvider({
   const value = useMemo<WashiContextValue>(
     () => ({
       washi: washiRef.current,
+      iframeEl: iframeElState,
       mode,
       setMode,
       comments,
@@ -322,6 +327,7 @@ export function WashiProvider({
       setActiveComment,
     }),
     [
+      iframeElState,
       mode,
       setMode,
       comments,

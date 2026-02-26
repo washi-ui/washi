@@ -13,6 +13,8 @@ interface PendingPin {
   y: number;
   pixelX: number;
   pixelY: number;
+  containerW: number;
+  containerH: number;
 }
 
 /**
@@ -25,21 +27,25 @@ interface PendingPin {
  * Drop this anywhere inside a `<WashiProvider>` — no props required.
  */
 export function WashiPinDialog({ accentColor = '#667eea', onComment }: WashiPinDialogProps) {
-  const { onPinPlaced, addComment, setMode } = useWashiContext();
+  const { onPinPlaced, addComment, setMode, iframeEl } = useWashiContext();
   const [pending, setPending] = useState<PendingPin | null>(null);
   const [text, setText] = useState('');
 
   useEffect(() => {
     return onPinPlaced((event: PinPlacedEvent) => {
+      const containerW = iframeEl?.clientWidth ?? window.innerWidth;
+      const containerH = iframeEl?.clientHeight ?? window.innerHeight;
       setText('');
       setPending({
         x: event.x,
         y: event.y,
-        pixelX: (event.x / 100) * window.innerWidth,
-        pixelY: (event.y / 100) * window.innerHeight,
+        pixelX: (event.x / 100) * containerW,
+        pixelY: (event.y / 100) * containerH,
+        containerW,
+        containerH,
       });
     });
-  }, [onPinPlaced]);
+  }, [onPinPlaced, iframeEl]);
 
   if (!pending) return null;
 
@@ -61,9 +67,9 @@ export function WashiPinDialog({ accentColor = '#667eea', onComment }: WashiPinD
   const POPOVER_WIDTH = 280;
   const left = Math.min(
     Math.max(pending.pixelX - POPOVER_WIDTH / 2, 8),
-    window.innerWidth - POPOVER_WIDTH - 8,
+    pending.containerW - POPOVER_WIDTH - 8,
   );
-  const showAbove = pending.pixelY > window.innerHeight * 0.65;
+  const showAbove = pending.pixelY > pending.containerH * 0.65;
   const top = showAbove ? pending.pixelY - 172 : pending.pixelY + 16;
 
   return (

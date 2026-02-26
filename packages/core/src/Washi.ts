@@ -516,7 +516,7 @@ export class Washi {
       width: ${contentWidth}px;
       height: ${contentHeight}px;
       pointer-events: ${this.mode === 'annotate' ? 'auto' : 'none'};
-      z-index: 9999;
+      z-index: 1;
     `;
 
     return overlay;

@@ -43,5 +43,5 @@ Initial stable release.
 - `LocalStorageAdapter` — persists comments to `localStorage`, namespaced by key
 - `MemoryAdapter` — in-memory storage with `seed()` helper for tests
 
-[Unreleased]: https://github.com/marcochavezco/washi-ui/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/marcochavezco/washi-ui/releases/tag/v1.0.0
+[Unreleased]: https://github.com/washi-ui/washi/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/washi-ui/washi/releases/tag/v1.0.0

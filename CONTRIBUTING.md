@@ -10,7 +10,7 @@ Thank you for your interest in contributing! This document covers how to set up 
 ## Local Setup
 
 ```bash
-git clone https://github.com/marcochavezco/washi-ui.git
+git clone https://github.com/washi-ui/washi.git
 cd washi-ui
 pnpm install
 pnpm build
@@ -77,4 +77,4 @@ The release workflow will automatically bump versions and publish to npm when th
 
 ## Questions
 
-If something is unclear, open a [discussion](https://github.com/marcochavezco/washi-ui/discussions) or drop a comment on the relevant issue.
+If something is unclear, open a [discussion](https://github.com/washi-ui/washi/discussions) or drop a comment on the relevant issue.

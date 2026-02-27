@@ -23,13 +23,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/marcochavezco/washi-ui.git",
+    "url": "git+https://github.com/washi-ui/washi.git",
     "directory": "packages/adapters"
   },
   "bugs": {
-    "url": "https://github.com/marcochavezco/washi-ui/issues"
+    "url": "https://github.com/washi-ui/washi/issues"
   },
-  "homepage": "https://github.com/marcochavezco/washi-ui#readme",
+  "homepage": "https://github.com/washi-ui/washi#readme",
   "dependencies": {
     "@washi-ui/core": "workspace:*"
   },

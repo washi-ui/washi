@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import React from 'react';
 import { render, act } from '@testing-library/react';
 import { useWashi, UseWashiReturn } from '../useWashi';

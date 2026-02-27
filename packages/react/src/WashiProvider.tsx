@@ -73,7 +73,7 @@ export interface WashiProviderProps {
   /** Optional: Mount options for the Washi instance */
   mountOptions?: MountOptions;
   /** Child components */
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 /**

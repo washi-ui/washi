@@ -1,6 +1,12 @@
-# Washi UI
+<p align="center">
+  <img src=".github/assets/washi-ui-logo.png" alt="Washi UI" width="100%" />
+</p>
 
-Pin-based HTML commenting for modern web applications. Washi lets users click anywhere on an iframe-rendered page to drop comment pins, creating a Figma-style annotation layer on top of any HTML content.
+<p align="center">
+  Pin-based HTML commenting for modern web applications.<br />
+  Washi lets users click anywhere on an iframe-rendered page to drop comment pins,<br />
+  creating a Figma-style annotation layer on top of any HTML content.
+</p>
 
 ## Packages
 

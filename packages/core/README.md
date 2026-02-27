@@ -1,35 +1,34 @@
 # @washi-ui/core
 
-Framework-agnostic HTML commenting engine. Add pin-based annotations to any HTML content rendered in an iframe.
+Framework-agnostic HTML commenting engine. Mount an annotation layer on top of any iframe, handle pin-based comments, and delegate storage to any backend via the adapter pattern.
 
 ## Installation
 
 ```bash
 npm install @washi-ui/core
-# or
-pnpm add @washi-ui/core
 ```
 
 ## Quick Start
 
 ```typescript
-import { Washi, WashiAdapter, Comment } from '@washi-ui/core';
+import { Washi } from '@washi-ui/core';
 
-// 1. Create your adapter (implements storage)
-const adapter: WashiAdapter = {
+// 1. Implement a storage adapter
+const adapter = {
   async save(comment) {
     await fetch('/api/comments', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(comment),
     });
   },
   async load() {
-    const res = await fetch('/api/comments');
-    return res.json();
+    return fetch('/api/comments').then(r => r.json());
   },
   async update(id, updates) {
     await fetch(`/api/comments/${id}`, {
       method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
   },
@@ -38,137 +37,184 @@ const adapter: WashiAdapter = {
   },
 };
 
-// 2. Create Washi instance
+// 2. Create and mount
 const washi = new Washi(adapter);
+await washi.mount(document.querySelector('iframe'));
 
-// 3. Mount to an iframe
-const iframe = document.querySelector('iframe');
-await washi.mount(iframe);
-
-// 4. Listen for events
-washi.on('comment:created', ({ x, y }) => {
-  // User clicked in annotate mode - show comment input
-  console.log(`New comment at ${x}%, ${y}%`);
+// 3. Handle events
+washi.on('pin:placed', async ({ x, y }) => {
+  // User clicked the overlay in annotate mode
+  // Show your comment input, then call addComment
+  const text = prompt('Comment:');
+  if (text) await washi.addComment({ x, y, text });
 });
 
-washi.on('comment:clicked', (comment) => {
-  // User clicked a pin - show comment details
-  console.log('Clicked:', comment.text);
+washi.on('comment:clicked', ({ comment }) => {
+  console.log('Pin clicked:', comment.text);
 });
 
-// 5. Enable annotation mode
+// 4. Enable annotate mode
 washi.setMode('annotate');
 ```
+
+---
 
 ## API Reference
 
-### Constructor
+### `new Washi(adapter)`
+
+Creates a Washi instance. The adapter handles all storage — it is not called until `mount()` is called.
 
 ```typescript
-new Washi(adapter: WashiAdapter)
+const washi = new Washi(adapter);
 ```
 
-Creates a new Washi instance with the specified storage adapter.
+---
 
-### Methods
+### `washi.mount(iframe, options?)`
 
-#### `mount(iframe, options?)`
-
-Mounts Washi to an iframe element. This is async and loads existing comments.
+Mounts the annotation layer onto an iframe. Async — loads existing comments from the adapter and waits for iframe content dimensions to stabilise before rendering pins.
 
 ```typescript
-await washi.mount(iframe);
+await washi.mount(document.querySelector('iframe'));
 
 // With options
-await washi.mount(iframe, { readOnly: true });
+await washi.mount(iframe, {
+  readOnly: true,             // Disable annotate mode
+  disableBuiltinDialog: true, // Suppress built-in click popover
+});
 ```
 
-**Options:**
-- `readOnly?: boolean` - Prevents switching to annotate mode
-- `theme?: 'light' | 'dark'` - Visual theme (reserved for future use)
+**MountOptions**
 
-#### `unmount()`
+| Option | Type | Description |
+|--------|------|-------------|
+| `readOnly` | `boolean` | Prevents switching to annotate mode |
+| `disableBuiltinDialog` | `boolean` | Suppresses the built-in pin popover on click. Use when rendering your own popover via `comment:clicked`. |
 
-Unmounts and cleans up all resources. Safe to call multiple times.
+Throws if the iframe is already mounted (call `unmount()` first) or not attached to the DOM.
+
+---
+
+### `washi.unmount()`
+
+Removes the overlay, cleans up all event listeners, and clears internal state. Safe to call multiple times.
 
 ```typescript
 washi.unmount();
+// Can now mount to a different iframe
+await washi.mount(otherIframe);
 ```
 
-#### `setMode(mode)`
+---
 
-Sets the interaction mode. Emits `mode:changed` event.
+### `washi.setMode(mode)`
 
-- `'view'` - Pins are clickable, overlay doesn't capture clicks
-- `'annotate'` - Clicking overlay emits coordinates for new comments
+Switches between interaction modes. Emits `mode:changed`.
+
+| Mode | Behaviour |
+|------|-----------|
+| `'view'` | Overlay has no pointer events; existing pins are clickable |
+| `'annotate'` | Overlay captures clicks and emits `pin:placed` with `{ x, y }` coordinates |
 
 ```typescript
 washi.setMode('annotate');
+washi.setMode('view');
 ```
 
-#### `addComment(comment)`
+Throws if `readOnly` was set in mount options and mode is `'annotate'`.
 
-Adds a comment and renders its pin.
+---
 
-```typescript
-await washi.addComment({
-  id: 'comment-1',      // You provide the ID
-  x: 50,                // 0-100 percentage
-  y: 25,                // 0-100 percentage
-  text: 'Review this',
-  createdAt: Date.now(),
-});
-```
+### `washi.addComment(input)`
 
-#### `updateComment(id, updates)`
-
-Updates a comment. Re-renders pin if position changes.
+Adds a comment and renders its pin on the overlay. The library generates `id` and `createdAt` — you only need to provide `x`, `y`, and `text`.
 
 ```typescript
-await washi.updateComment('comment-1', { resolved: true });
-await washi.updateComment('comment-1', { x: 75, y: 50 });
-```
-
-#### `deleteComment(id)`
-
-Deletes a comment and removes its pin.
-
-```typescript
-await washi.deleteComment('comment-1');
-```
-
-#### `getComments()`
-
-Returns all comments as an array of shallow copies.
-
-```typescript
-const comments = washi.getComments();
-```
-
-#### `on(event, handler)`
-
-Subscribes to events. Returns an unsubscribe function.
-
-```typescript
-const unsubscribe = washi.on('comment:clicked', (comment) => {
-  console.log(comment);
+const comment = await washi.addComment({
+  x: 42.5,           // 0–100, percentage of content width
+  y: 18.0,           // 0–100, percentage of content height
+  text: 'This heading needs more contrast',
+  color: '#ef4444',  // optional, defaults to palette
 });
 
-// Later
-unsubscribe();
+console.log(comment.id);        // auto-generated UUID
+console.log(comment.createdAt); // auto-generated timestamp
 ```
 
-### Events
+Emits `comment:created` with the full `Comment` on success.
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `comment:created` | `{ x, y }` | Overlay clicked in annotate mode |
-| `comment:clicked` | `Comment` | Pin clicked |
-| `comment:updated` | `{ id, updates }` | Comment updated |
-| `comment:deleted` | `string` (id) | Comment deleted |
-| `mode:changed` | `{ mode, previousMode }` | Mode changed |
+---
 
-### WashiAdapter Interface
+### `washi.updateComment(id, updates)`
+
+Updates a comment with partial data. Re-renders the pin if `x`, `y`, `color`, or `resolved` changes.
+
+```typescript
+await washi.updateComment('abc', { resolved: true });
+await washi.updateComment('abc', { x: 60, y: 30 });
+await washi.updateComment('abc', { color: '#10b981' });
+```
+
+Emits `comment:updated` with `{ id, updates }`.
+
+---
+
+### `washi.deleteComment(id)`
+
+Deletes a comment and removes its pin. Re-renders remaining pins to update their numbered badges.
+
+```typescript
+await washi.deleteComment('abc');
+```
+
+Emits `comment:deleted` with `{ id }`.
+
+---
+
+### `washi.getComments()`
+
+Returns a snapshot of all current comments as shallow copies.
+
+```typescript
+const all = washi.getComments();
+const unresolved = washi.getComments().filter(c => !c.resolved);
+```
+
+---
+
+### `washi.on(event, handler)`
+
+Subscribes to an event. Returns an unsubscribe function.
+
+```typescript
+const off = washi.on('comment:created', (comment) => {
+  console.log('New comment:', comment.id);
+});
+
+// Unsubscribe later
+off();
+```
+
+---
+
+## Events
+
+| Event | Payload type | When |
+|-------|-------------|------|
+| `pin:placed` | `PinPlacedEvent` | User clicked the overlay in annotate mode |
+| `comment:created` | `Comment` | `addComment()` succeeded and comment was persisted |
+| `comment:updated` | `CommentUpdatedEvent` | `updateComment()` succeeded |
+| `comment:deleted` | `CommentDeletedEvent` | `deleteComment()` succeeded |
+| `comment:clicked` | `CommentClickedEvent` | User clicked an existing pin |
+| `mode:changed` | `ModeChangedEvent` | `setMode()` was called |
+| `error` | `ErrorEvent` | An internal load/save error occurred |
+
+---
+
+## Types
+
+### `WashiAdapter`
 
 ```typescript
 interface WashiAdapter {
@@ -176,27 +222,57 @@ interface WashiAdapter {
   load(): Promise<Comment[]>;
   update(id: string, updates: Partial<Comment>): Promise<void>;
   delete(id: string): Promise<void>;
-  subscribe?(callback: (comment: Comment) => void): () => void;
 }
 ```
 
-### Comment Interface
+### `Comment`
 
 ```typescript
 interface Comment {
-  id: string;           // Unique ID (you provide this)
-  x: number;            // 0-100 percentage position
-  y: number;            // 0-100 percentage position
-  text: string;         // Comment content
-  resolved?: boolean;   // Resolution status
-  createdAt: number;    // Unix timestamp (ms)
+  id: string;         // UUID, generated by the library
+  x: number;          // 0–100, percentage of content width
+  y: number;          // 0–100, percentage of content height
+  text: string;
+  color?: string;
+  resolved?: boolean;
+  createdAt: number;  // Unix ms, generated by the library
 }
 ```
 
-## Framework Integration
+### `NewComment`
 
-- **React**: Use `@washi-ui/react` for hooks and components
-- **Vue/Svelte/etc**: Use `@washi-ui/core` directly
+Input type for `addComment()`. Omits `id` and `createdAt`, which are generated automatically.
+
+```typescript
+interface NewComment {
+  x: number;
+  y: number;
+  text: string;
+  color?: string;
+}
+```
+
+### `MountOptions`
+
+```typescript
+interface MountOptions {
+  readOnly?: boolean;
+  disableBuiltinDialog?: boolean;
+}
+```
+
+### Event payloads
+
+```typescript
+interface PinPlacedEvent     { x: number; y: number; }
+interface CommentUpdatedEvent { id: string; updates: Partial<Comment>; }
+interface CommentDeletedEvent { id: string; }
+interface CommentClickedEvent { comment: Comment; }
+interface ModeChangedEvent   { mode: WashiMode; previousMode: WashiMode; }
+interface ErrorEvent         { type: string; message: string; error?: Error; }
+```
+
+---
 
 ## License
 

@@ -1,6 +1,6 @@
 {
   "name": "@washi-ui/react",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "React bindings for Washi HTML commenting engine",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

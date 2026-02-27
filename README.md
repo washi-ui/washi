@@ -1,70 +1,83 @@
 # Washi UI
 
-A pin-based HTML commenting library for modern web applications. Add collaborative annotations to any HTML content rendered in an iframe.
-
-## Features
-
-- **Pin-Based Comments** - Users click anywhere to place comment pins at precise locations
-- **Scroll Sync** - Pins stay aligned with content as users scroll
-- **Framework Agnostic** - Core library works anywhere, with React bindings included
-- **Adapter Pattern** - Bring your own storage backend (REST, GraphQL, Firebase, etc.)
-- **TypeScript First** - Full type definitions included
+Pin-based HTML commenting for modern web applications. Washi lets users click anywhere on an iframe-rendered page to drop comment pins, creating a Figma-style annotation layer on top of any HTML content.
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| [`@washi-ui/core`](./packages/core) | Framework-agnostic core library |
-| [`@washi-ui/react`](./packages/react) | React hooks and components |
-| [`@washi-ui/adapters`](./packages/adapters) | Built-in adapters (LocalStorage, Memory) |
+| Package | Version | Description |
+|---------|---------|-------------|
+| [`@washi-ui/core`](./packages/core) | ![npm](https://img.shields.io/npm/v/@washi-ui/core) | Framework-agnostic engine |
+| [`@washi-ui/react`](./packages/react) | ![npm](https://img.shields.io/npm/v/@washi-ui/react) | React hooks and components |
+| [`@washi-ui/adapters`](./packages/adapters) | ![npm](https://img.shields.io/npm/v/@washi-ui/adapters) | Built-in storage adapters |
 
-## Quick Start
+---
 
-### React
+## Quick Start — React
+
+### 1. Install
 
 ```bash
 npm install @washi-ui/react @washi-ui/core @washi-ui/adapters
 ```
 
+### 2. Drop in `WashiUI`
+
+The fastest path: wrap your iframe in `WashiProvider`, swap `<iframe>` for `<WashiFrame>`, and add `<WashiUI>`. You get a floating tool bubble, a comments sidebar, and a pin dialog — zero configuration.
+
 ```tsx
-import { useState } from 'react';
+import { useMemo } from 'react';
+import { WashiProvider, WashiFrame, WashiUI } from '@washi-ui/react';
+import { LocalStorageAdapter } from '@washi-ui/adapters';
+
+export default function App() {
+  const adapter = useMemo(() => new LocalStorageAdapter('my-page'), []);
+
+  return (
+    <WashiProvider adapter={adapter}>
+      <WashiFrame
+        src="/content.html"
+        style={{ width: '100%', height: '100vh', border: 'none' }}
+      />
+      <WashiUI position="bottom-right" />
+    </WashiProvider>
+  );
+}
+```
+
+### 3. Custom UI
+
+For full control, use the `useWashi` hook and bring your own UI:
+
+```tsx
+import { useRef } from 'react';
 import { useWashi } from '@washi-ui/react';
 import { LocalStorageAdapter } from '@washi-ui/adapters';
 
-const adapter = new LocalStorageAdapter('my-page-comments');
+const adapter = new LocalStorageAdapter('my-page');
 
 function App() {
-  const [pendingPin, setPendingPin] = useState<{ x: number; y: number } | null>(null);
-
   const { iframeRef, mode, setMode, comments, addComment } = useWashi({
     adapter,
-    onPinPlaced: ({ x, y }) => {
-      // User clicked the overlay — show your dialog, then call addComment
-      setPendingPin({ x, y });
+    onPinPlaced: async ({ x, y }) => {
+      const text = prompt('Add a comment:');
+      if (text) await addComment({ x, y, text });
     },
   });
 
-  const handleSubmit = async (text: string) => {
-    if (!pendingPin) return;
-    await addComment({ ...pendingPin, text });
-    setPendingPin(null);
-  };
-
   return (
     <div>
-      <button onClick={() => setMode(mode === 'view' ? 'annotate' : 'view')}>
-        {mode === 'annotate' ? 'Done' : 'Add Comment'}
+      <button onClick={() => setMode(mode === 'annotate' ? 'view' : 'annotate')}>
+        {mode === 'annotate' ? 'Done' : 'Annotate'}
       </button>
-      <div style={{ position: 'relative' }}>
-        <iframe ref={iframeRef} src="/content.html" />
-      </div>
-      {/* Render your custom dialog when pendingPin is set */}
+      <iframe ref={iframeRef} src="/content.html" style={{ width: '100%', height: '600px' }} />
     </div>
   );
 }
 ```
 
-### Vanilla JavaScript
+---
+
+## Quick Start — Vanilla JS
 
 ```bash
 npm install @washi-ui/core @washi-ui/adapters
@@ -74,90 +87,68 @@ npm install @washi-ui/core @washi-ui/adapters
 import { Washi } from '@washi-ui/core';
 import { LocalStorageAdapter } from '@washi-ui/adapters';
 
-const adapter = new LocalStorageAdapter();
-const washi = new Washi(adapter);
+const washi = new Washi(new LocalStorageAdapter('my-page'));
 
 await washi.mount(document.querySelector('iframe'));
 
 washi.on('pin:placed', async ({ x, y }) => {
-  const text = prompt('Comment:');
-  if (text) {
-    const comment = await washi.addComment({ x, y, text });
-    console.log('Created comment:', comment.id);
-  }
+  const text = prompt('Add a comment:');
+  if (text) await washi.addComment({ x, y, text });
 });
 
 washi.setMode('annotate');
 ```
 
-## Demo
-
-Run the demo app:
-
-```bash
-# From repo root
-pnpm install
-pnpm build
-cd examples/demo
-pnpm dev
-```
-
-## Development
-
-This is a pnpm monorepo.
-
-```bash
-# Install dependencies
-pnpm install
-
-# Build all packages
-pnpm build
-
-# Run tests
-pnpm test
-
-# Run core package in watch mode
-pnpm dev
-```
+---
 
 ## How It Works
 
-1. **Mount**: Washi creates an invisible overlay positioned over your iframe
-2. **View Mode**: Users can click pins to view/interact with comments
-3. **Annotate Mode**: Clicking the overlay emits a `pin:placed` event with `{ x, y }` coordinates
-4. **Comment Creation**: Call `addComment({ x, y, text })` — the library generates `id` and `createdAt`
-5. **Scroll Sync**: The overlay transforms to match iframe scroll position
-6. **Adapter**: All persistence is delegated to your adapter implementation
+1. **Mount** — Washi appends a transparent overlay div on top of your iframe
+2. **View mode** — overlay has `pointer-events: none`; existing pins are clickable
+3. **Annotate mode** — overlay captures clicks and emits `pin:placed` with `{ x, y }` as percentages of the content area
+4. **addComment** — call it with `{ x, y, text }`; the library generates `id` and `createdAt`, persists via your adapter, and renders the pin
+5. **Scroll sync** — the overlay translates to match the iframe's scroll position, keeping pins anchored to content
+
+---
 
 ## Events
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `pin:placed` | `{ x, y }` | Overlay clicked in annotate mode — use to show comment input UI |
-| `comment:created` | `Comment` | A comment was successfully saved via `addComment()` |
-| `comment:updated` | `{ id, updates }` | A comment was updated |
-| `comment:deleted` | `{ id }` | A comment was deleted |
-| `comment:clicked` | `{ comment }` | A pin was clicked |
-| `mode:changed` | `{ mode, previousMode }` | Mode switched |
+Subscribe via `washi.on(event, handler)`. Each call returns an unsubscribe function.
+
+| Event | Payload | When |
+|-------|---------|------|
+| `pin:placed` | `{ x, y }` | User clicked the overlay in annotate mode |
+| `comment:created` | `Comment` | `addComment()` succeeded |
+| `comment:updated` | `{ id, updates }` | `updateComment()` succeeded |
+| `comment:deleted` | `{ id }` | `deleteComment()` succeeded |
+| `comment:clicked` | `{ comment }` | User clicked an existing pin |
+| `mode:changed` | `{ mode, previousMode }` | `setMode()` was called |
 | `error` | `{ type, message, error? }` | An internal error occurred |
 
-## Custom Popover (disable built-in dialog)
+---
+
+## Adapters
+
+Adapters handle persistence. Use a built-in one or implement `WashiAdapter` for any backend.
+
+### Built-in adapters
 
 ```typescript
-await washi.mount(iframe, { disableBuiltinDialog: true });
+import { LocalStorageAdapter, MemoryAdapter } from '@washi-ui/adapters';
 
-washi.on('comment:clicked', ({ comment }) => {
-  // Show your own popover for the clicked comment
-  showMyPopover(comment);
-});
+// Persists to localStorage — good for demos and single-user apps
+const adapter = new LocalStorageAdapter('my-page-comments');
+
+// In-memory only — good for tests and ephemeral sessions
+const adapter = new MemoryAdapter();
 ```
 
-## Creating an Adapter
+### Custom adapter
 
 ```typescript
-import { WashiAdapter, Comment } from '@washi-ui/core';
+import type { WashiAdapter, Comment } from '@washi-ui/core';
 
-class MyAdapter implements WashiAdapter {
+class MyApiAdapter implements WashiAdapter {
   async save(comment: Comment) {
     await fetch('/api/comments', {
       method: 'POST',
@@ -167,8 +158,7 @@ class MyAdapter implements WashiAdapter {
   }
 
   async load(): Promise<Comment[]> {
-    const res = await fetch('/api/comments');
-    return res.json();
+    return fetch('/api/comments').then(r => r.json());
   }
 
   async update(id: string, updates: Partial<Comment>) {
@@ -185,7 +175,40 @@ class MyAdapter implements WashiAdapter {
 }
 ```
 
+---
+
+## Mount Options
+
+```typescript
+await washi.mount(iframe, {
+  readOnly: true,            // Disable annotate mode
+  disableBuiltinDialog: true, // Suppress the built-in click popover
+});
+```
+
+Use `disableBuiltinDialog` when rendering your own popover via the `comment:clicked` event.
+
+---
+
+## Development
+
+This is a pnpm monorepo.
+
+```bash
+pnpm install   # install dependencies
+pnpm build     # build all packages
+pnpm test      # run all tests
+pnpm lint      # typecheck all packages
+```
+
+Run the dev sandbox:
+
+```bash
+pnpm --filter @washi-ui/demo dev
+```
+
+---
+
 ## License
 
 MIT
-# washi

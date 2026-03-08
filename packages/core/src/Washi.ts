@@ -23,8 +23,14 @@ import {
  * Default color palette for pins
  */
 const WASHI_COLORS = [
-  '#667eea', '#f59e0b', '#10b981', '#ef4444',
-  '#8b5cf6', '#06b6d4', '#f97316', '#ec4899'
+  '#667eea',
+  '#f59e0b',
+  '#10b981',
+  '#ef4444',
+  '#8b5cf6',
+  '#06b6d4',
+  '#f97316',
+  '#ec4899',
 ];
 
 /**
@@ -123,13 +129,17 @@ export class Washi {
     };
 
     // Wait for next frame
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
 
     let lastSize = getContentSize();
     let stableCount = 0;
 
     for (let i = 0; i < 10; i++) {
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
       const currentSize = getContentSize();
 
       if (
@@ -165,7 +175,10 @@ export class Washi {
    * await washi.mount(iframe, { readOnly: true });
    * ```
    */
-  async mount(iframe: HTMLIFrameElement, options?: MountOptions): Promise<void> {
+  async mount(
+    iframe: HTMLIFrameElement,
+    options?: MountOptions,
+  ): Promise<void> {
     if (this.iframe) {
       throw new Error('iframe already mounted. Unmount first.');
     }
@@ -463,7 +476,10 @@ export class Washi {
 
     // Close dialog when clicking outside
     const handleOutsideClick = (e: MouseEvent) => {
-      if (!dialog.contains(e.target as Node) && !pin.contains(e.target as Node)) {
+      if (
+        !dialog.contains(e.target as Node) &&
+        !pin.contains(e.target as Node)
+      ) {
         this.hidePinDialog();
         document.removeEventListener('click', handleOutsideClick);
       }
@@ -516,6 +532,7 @@ export class Washi {
       width: ${contentWidth}px;
       height: ${contentHeight}px;
       pointer-events: ${this.mode === 'annotate' ? 'auto' : 'none'};
+      cursor: ${this.mode === 'annotate' ? 'crosshair' : ''};
       z-index: 1;
     `;
 
@@ -537,7 +554,9 @@ export class Washi {
         event.preventDefault();
       }
     };
-    this.overlay.addEventListener('wheel', this.boundHandleWheel, { passive: false });
+    this.overlay.addEventListener('wheel', this.boundHandleWheel, {
+      passive: false,
+    });
 
     this.syncScroll();
   }
@@ -636,9 +655,11 @@ export class Washi {
     const clickY = event.clientY - overlayRect.top;
 
     const contentWidth =
-      this.iframe.contentDocument?.documentElement.scrollWidth || overlayRect.width;
+      this.iframe.contentDocument?.documentElement.scrollWidth ||
+      overlayRect.width;
     const contentHeight =
-      this.iframe.contentDocument?.documentElement.scrollHeight || overlayRect.height;
+      this.iframe.contentDocument?.documentElement.scrollHeight ||
+      overlayRect.height;
 
     const percentX = Math.min(100, Math.max(0, (clickX / contentWidth) * 100));
     const percentY = Math.min(100, Math.max(0, (clickY / contentHeight) * 100));
@@ -807,7 +828,12 @@ export class Washi {
     this.comments.set(id, updated);
 
     // Re-render pin if position, color, or resolved state changed
-    if (updates.x !== undefined || updates.y !== undefined || updates.color !== undefined || updates.resolved !== undefined) {
+    if (
+      updates.x !== undefined ||
+      updates.y !== undefined ||
+      updates.color !== undefined ||
+      updates.resolved !== undefined
+    ) {
       const pin = this.pins.get(id);
       if (pin) {
         pin.remove();
@@ -922,6 +948,7 @@ export class Washi {
 
     if (this.overlay) {
       this.overlay.style.pointerEvents = mode === 'annotate' ? 'auto' : 'none';
+      this.overlay.style.cursor = mode === 'annotate' ? 'crosshair' : '';
     }
   }
 

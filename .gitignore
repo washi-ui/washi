@@ -30,5 +30,4 @@ coverage/
 .nyc_output/
 
 # Changesets
-.changeset/*.md
-!.changeset/config.json
+# .changeset/*.md files must be committed — they drive version bumps and releases

@@ -2,4 +2,9 @@
 '@washi-ui/react': patch
 ---
 
-adds && iframe.contentDocument.URL !== 'about:blank' to the condition so handleLoad() is never called on the initial blank document. The load event will fire when the real src is ready, ensuring syncScroll attaches to the correct window.
+Fix (WashiProvider.tsx): replaced the simple readyState === 'complete' check with a pendingNavigation guard that detects when contentDocument is still about:blank but iframe.src points to a real URL. In that case, mounting is deferred to the load event so syncScroll always attaches to the correct window.
+
+Tests (WashiProvider.test.tsx):
+
+- Regression test: mocks the about:blank + real src state (the exact production race condition), asserts isReady is false before load and true after — if the guard is ever removed, this test fails.
+- Backward compat test: confirms that an iframe with no src (genuine about:blank) still mounts immediately without needing a load event.

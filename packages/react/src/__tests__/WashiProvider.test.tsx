@@ -81,6 +81,82 @@ describe('WashiProvider', () => {
   });
 });
 
+describe('registerIframe — about:blank guard', () => {
+  let adapter: MemoryAdapter;
+
+  beforeEach(() => {
+    adapter = new MemoryAdapter();
+  });
+
+  function renderAndCapture() {
+    let ctx!: WashiContextValue;
+    function Capture() {
+      ctx = useWashiContext();
+      return null;
+    }
+    render(
+      React.createElement(WashiProvider, { adapter },
+        React.createElement(Capture),
+      ),
+    );
+    return () => ctx;
+  }
+
+  it('defers mount until load event when iframe has a real src but contentDocument is still about:blank', async () => {
+    const getCtx = renderAndCapture();
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const iframe = document.createElement('iframe');
+    container.appendChild(iframe);
+
+    // Simulate the production timing: the browser has set src and started
+    // navigating, but the about:blank document is still the active one.
+    // jsdom 27 navigates iframes automatically, so we mock the properties
+    // that WashiProvider reads to reproduce the exact race condition.
+    const blankDoc = { readyState: 'complete' as DocumentReadyState, URL: 'about:blank' };
+    Object.defineProperty(iframe, 'contentDocument', { get: () => blankDoc, configurable: true });
+    Object.defineProperty(iframe, 'src', { get: () => 'http://localhost/sample.html', configurable: true });
+
+    await act(async () => {
+      getCtx().registerIframe(iframe);
+    });
+
+    // handleLoad must NOT have fired — real src still pending
+    expect(getCtx().isReady).toBe(false);
+
+    // Restore real properties so mount() can run cleanly when load fires
+    delete (iframe as any).contentDocument;
+    delete (iframe as any).src;
+
+    await act(async () => {
+      iframe.dispatchEvent(new Event('load'));
+    });
+
+    expect(getCtx().isReady).toBe(true);
+
+    container.remove();
+  });
+
+  it('mounts immediately when iframe has no src (intentionally about:blank)', async () => {
+    const getCtx = renderAndCapture();
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const iframe = document.createElement('iframe');
+    // No src — about:blank is the intended document, not a pending navigation
+    container.appendChild(iframe);
+
+    await act(async () => {
+      getCtx().registerIframe(iframe);
+    });
+
+    expect(getCtx().isReady).toBe(true);
+
+    container.remove();
+  });
+});
+
 describe('useWashiContext', () => {
   let adapter: MemoryAdapter;
 

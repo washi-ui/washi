@@ -211,7 +211,10 @@ export function WashiProvider({
         }
       };
 
-      if (iframe.contentDocument?.readyState === 'complete') {
+      if (
+        iframe.contentDocument?.readyState === 'complete' &&
+        iframe.contentDocument.URL !== 'about:blank'
+      ) {
         handleLoad();
       } else {
         iframe.addEventListener('load', handleLoad);

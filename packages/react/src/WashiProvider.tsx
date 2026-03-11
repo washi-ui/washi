@@ -211,7 +211,16 @@ export function WashiProvider({
         }
       };
 
-      if (iframe.contentDocument?.readyState === 'complete') {
+      // Don't treat the initial about:blank as "loaded" when a real src is
+      // pending. The browser replaces the window when the src finishes
+      // loading, which would silently drop any scroll listeners attached
+      // during a premature mount.
+      const pendingNavigation =
+        iframe.contentDocument?.URL === 'about:blank' &&
+        !!iframe.src &&
+        iframe.src !== 'about:blank';
+
+      if (!pendingNavigation && iframe.contentDocument?.readyState === 'complete') {
         handleLoad();
       } else {
         iframe.addEventListener('load', handleLoad);

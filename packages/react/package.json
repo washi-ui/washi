@@ -59,5 +59,8 @@
   ],
   "author": "Marco Chavez",
   "license": "MIT",
-  "sideEffects": false
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
 }

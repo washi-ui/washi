@@ -5,7 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.2] - 2026-03-11
+
+### `@washi-ui/react`
+
+- Fix: replaced the simple `readyState === 'complete'` check with a `pendingNavigation` guard that detects when `contentDocument` is still `about:blank` but `iframe.src` points to a real URL. Mounting is now deferred to the `load` event so `syncScroll` always attaches to the correct window.
+- Added regression test for the `about:blank` + real `src` race condition.
+- Added backward-compat test confirming iframes with no `src` still mount immediately.
+
+## [1.0.1] - 2026-03-08
+
+### `@washi-ui/core`
+
+- Add `cursor: crosshair` to the overlay element when switching to annotate mode.
+
+### `@washi-ui/react`
+
+- Updated to consume `@washi-ui/core@1.0.1`.
+
+### `@washi-ui/adapters`
+
+- Updated to consume `@washi-ui/core@1.0.1`.
 
 ## [1.0.0] - 2026-02-26
 
@@ -43,5 +63,6 @@ Initial stable release.
 - `LocalStorageAdapter` — persists comments to `localStorage`, namespaced by key
 - `MemoryAdapter` — in-memory storage with `seed()` helper for tests
 
-[Unreleased]: https://github.com/washi-ui/washi/compare/v1.0.0...HEAD
+[1.0.2]: https://github.com/washi-ui/washi/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/washi-ui/washi/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/washi-ui/washi/releases/tag/v1.0.0

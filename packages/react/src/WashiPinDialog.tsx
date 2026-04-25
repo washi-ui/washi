@@ -30,9 +30,14 @@ export function WashiPinDialog({ accentColor = '#667eea', onComment }: WashiPinD
   const { onPinPlaced, addComment, setMode, iframeEl } = useWashiContext();
   const [pending, setPending] = useState<PendingPin | null>(null);
   const [text, setText] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     return onPinPlaced((event: PinPlacedEvent) => {
+      // Switch out of annotate mode immediately so the overlay no longer
+      // captures pointer events while the user interacts with this dialog.
+      setMode('view');
+      setError(null);
       const containerW = iframeEl?.clientWidth ?? window.innerWidth;
       const containerH = iframeEl?.clientHeight ?? window.innerHeight;
       setText('');
@@ -45,16 +50,20 @@ export function WashiPinDialog({ accentColor = '#667eea', onComment }: WashiPinD
         containerH,
       });
     });
-  }, [onPinPlaced, iframeEl]);
+  }, [onPinPlaced, setMode, iframeEl]);
 
   if (!pending) return null;
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
-    const comment = await addComment({ x: pending.x, y: pending.y, text: text.trim(), color: accentColor });
-    setPending(null);
-    setMode('view');
-    onComment?.(comment);
+    setError(null);
+    try {
+      const comment = await addComment({ x: pending.x, y: pending.y, text: text.trim(), color: accentColor });
+      setPending(null);
+      onComment?.(comment);
+    } catch {
+      setError('Failed to save comment. Please try again.');
+    }
   };
 
   const handleCancel = () => setPending(null);
@@ -120,6 +129,10 @@ export function WashiPinDialog({ accentColor = '#667eea', onComment }: WashiPinD
           onKeyDown={handleKeyDown}
           autoFocus
         />
+
+        {error && (
+          <p style={{ margin: '8px 0 0', fontSize: '0.75rem', color: '#ef4444' }}>{error}</p>
+        )}
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
           <button

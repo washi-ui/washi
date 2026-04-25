@@ -1,5 +1,13 @@
 # @washi-ui/demo
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [664932b]
+  - @washi-ui/core@1.0.2
+  - @washi-ui/react@1.0.3
+
 ## 0.0.2
 
 ### Patch Changes

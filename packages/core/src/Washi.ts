@@ -22,6 +22,16 @@ import {
 /**
  * Default color palette for pins
  */
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 const WASHI_COLORS = [
   '#667eea',
   '#f59e0b',
@@ -85,20 +95,6 @@ export class Washi {
     this.mode = 'view';
     this.pins = new Map();
     this.eventHandlers = new Map();
-  }
-
-  private throttle<T extends (...args: any[]) => void>(
-    fn: T,
-    delay: number,
-  ): T {
-    let lastCall = 0;
-    return ((...args: Parameters<T>) => {
-      const now = Date.now();
-      if (now - lastCall >= delay) {
-        lastCall = now;
-        fn(...args);
-      }
-    }) as T;
   }
 
   private validateCoordinates(x: number, y: number): void {
@@ -674,16 +670,22 @@ export class Washi {
       return;
     }
 
-    const handleScroll = () => {
-      const scrollX = iframeWindow.scrollX;
-      const scrollY = iframeWindow.scrollY;
+    let rafPending = false;
 
-      if (this.overlay) {
-        this.overlay.style.transform = `translate(${-scrollX}px, ${-scrollY}px)`;
-      }
+    const handleScroll = () => {
+      if (rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(() => {
+        const scrollX = iframeWindow.scrollX;
+        const scrollY = iframeWindow.scrollY;
+        if (this.overlay) {
+          this.overlay.style.transform = `translate(${-scrollX}px, ${-scrollY}px)`;
+        }
+        rafPending = false;
+      });
     };
 
-    this.boundSyncScroll = this.throttle(handleScroll, 16);
+    this.boundSyncScroll = handleScroll;
     iframeWindow.addEventListener('scroll', this.boundSyncScroll);
   }
 
@@ -764,7 +766,7 @@ export class Washi {
 
     const comment: Comment = {
       ...input,
-      id: crypto.randomUUID(),
+      id: generateId(),
       createdAt: Date.now(),
     };
 

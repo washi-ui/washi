@@ -217,6 +217,63 @@ describe('Washi', () => {
     });
   });
 
+  describe('syncScroll()', () => {
+    // mount() uses requestAnimationFrame internally (waitForContentReady),
+    // so the spy must be installed after mount completes.
+    let rafCallbacks: FrameRequestCallback[];
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const mockRaf = () => {
+      rafCallbacks = [];
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        rafCallbacks.push(cb);
+        return rafCallbacks.length;
+      });
+    };
+
+    const flushRaf = () => {
+      const cbs = rafCallbacks.splice(0);
+      cbs.forEach((cb) => cb(0));
+    };
+
+    it('schedules a requestAnimationFrame on scroll', async () => {
+      await washi.mount(iframe);
+      mockRaf();
+      iframe.contentWindow!.dispatchEvent(new Event('scroll'));
+      expect(rafCallbacks).toHaveLength(1);
+    });
+
+    it('applies the overlay transform inside the rAF callback', async () => {
+      await washi.mount(iframe);
+      mockRaf();
+      iframe.contentWindow!.dispatchEvent(new Event('scroll'));
+      flushRaf();
+      const overlay = document.querySelector('.washi-overlay') as HTMLElement;
+      expect(overlay.style.transform).toMatch(/translate\(/);
+    });
+
+    it('coalesces multiple scroll events into one rAF', async () => {
+      await washi.mount(iframe);
+      mockRaf();
+      iframe.contentWindow!.dispatchEvent(new Event('scroll'));
+      iframe.contentWindow!.dispatchEvent(new Event('scroll'));
+      iframe.contentWindow!.dispatchEvent(new Event('scroll'));
+      expect(rafCallbacks).toHaveLength(1);
+    });
+
+    it('schedules a new rAF after the previous one flushes', async () => {
+      await washi.mount(iframe);
+      mockRaf();
+      iframe.contentWindow!.dispatchEvent(new Event('scroll'));
+      flushRaf();
+      iframe.contentWindow!.dispatchEvent(new Event('scroll'));
+      expect(rafCallbacks).toHaveLength(1);
+    });
+  });
+
   describe('on()', () => {
     it('returns unsubscribe function', async () => {
       await washi.mount(iframe);

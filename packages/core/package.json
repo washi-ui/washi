@@ -1,6 +1,6 @@
 {
   "name": "@washi-ui/core",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Framework-agnostic HTML commenting engine",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

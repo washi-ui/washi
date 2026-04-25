@@ -1,6 +1,6 @@
 {
   "name": "@washi-ui/adapters",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Built-in storage adapters for Washi HTML commenting engine",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
